@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2"
 
 	"github.com/alexbilevskiy/twitterbot/internal/config"
+	"github.com/alexbilevskiy/twitterbot/internal/formatter"
 	"github.com/alexbilevskiy/twitterbot/internal/x"
 )
 
@@ -51,11 +53,15 @@ func main() {
 				os.Exit(1)
 			}
 			for _, tweet := range tweets {
-				_, err := tgBot.SendMessage(cfg.ChatId, fmt.Sprintf("%s", tweet.URL), nil)
+				text, disablePreview := formatter.FormatTweet(tweet)
+				_, err := tgBot.SendMessage(cfg.ChatId, text, &gotgbot.SendMessageOpts{ParseMode: "HTML", LinkPreviewOptions: &gotgbot.LinkPreviewOptions{IsDisabled: disablePreview}})
 				if err != nil {
 					log.Printf("failed to send tg message: %v", err)
+					bytes, _ := json.Marshal(tweet)
+					_ = os.WriteFile(fmt.Sprintf(".cache/%s.json", tweet.ID), bytes, 0644)
 					continue
 				}
+				time.Sleep(5 * time.Second)
 			}
 		case <-ctx.Done():
 			log.Printf("exiting...")

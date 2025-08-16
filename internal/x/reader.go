@@ -62,11 +62,11 @@ func (r *XReader) Login() error {
 	return nil
 }
 
-func (r *XReader) ReadHome() ([]NormTweet, error) {
+func (r *XReader) ReadHome() ([]*twitterscraper.Tweet, error) {
 	if r.t == nil {
 		return nil, errors.New("auth first")
 	}
-	var list []NormTweet
+	var list []*twitterscraper.Tweet
 	var cursor string
 	page := 0
 	var first *twitterscraper.Tweet
@@ -96,11 +96,10 @@ func (r *XReader) ReadHome() ([]NormTweet, error) {
 		finished := false
 		log.Printf("Fetched %d tweets", len(tweets))
 		for _, tweet := range tweets {
-			url := fmt.Sprintf("https://x.com/%s/status/%s", tweet.Username, tweet.ID)
 			date := tweet.TimeParsed.Local().Format(time.DateTime)
 
 			if time.Since(tweet.TimeParsed) > dateLimit {
-				log.Printf("[%s] reached too old tweet: %s", date, url)
+				log.Printf("[%s] reached too old tweet: %s", date, tweet.PermanentURL)
 				finished = true
 				break
 			}
@@ -116,14 +115,14 @@ func (r *XReader) ReadHome() ([]NormTweet, error) {
 				lastId, _ := strconv.ParseInt(last.ID, 10, 64)
 				curId, _ := strconv.ParseInt(tweet.ID, 10, 64)
 				if lastId >= curId {
-					log.Printf("[%s] reached already processed tweet: %s", date, url)
+					log.Printf("[%s] reached already processed tweet: %s", date, tweet.PermanentURL)
 					finished = true
 					break
 				}
 			}
 
-			log.Printf("[%s] received new tweet: %s", date, url)
-			list = append([]NormTweet{{Tweet: tweet, URL: url, Date: date}}, list...)
+			log.Printf("[%s] received new tweet: %s", date, tweet.PermanentURL)
+			list = append([]*twitterscraper.Tweet{tweet}, list...)
 		}
 		if finished {
 			break
