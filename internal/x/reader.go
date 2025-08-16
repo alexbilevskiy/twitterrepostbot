@@ -4,13 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/alexbilevskiy/twitterbot/internal/config"
-	twitterscraper "github.com/imperatrona/twitter-scraper"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+
+	twitterscraper "github.com/imperatrona/twitter-scraper"
+
+	"github.com/alexbilevskiy/twitterbot/internal/config"
 )
 
 const dateLimit = 4 * 24 * time.Hour
@@ -20,6 +22,12 @@ var errInvalidAuth = errors.New("invalid auth")
 type XReader struct {
 	cfg *config.AppCfg
 	t   *twitterscraper.Scraper
+}
+
+type NormTweet struct {
+	Tweet *twitterscraper.Tweet
+	Date  string
+	URL   string
 }
 
 func NewXReader(cfg *config.AppCfg) *XReader {
@@ -54,10 +62,11 @@ func (r *XReader) Login() error {
 	return nil
 }
 
-func (r *XReader) ReadHome() error {
+func (r *XReader) ReadHome() ([]NormTweet, error) {
 	if r.t == nil {
-		return errors.New("auth first")
+		return nil, errors.New("auth first")
 	}
+	var list []NormTweet
 	var cursor string
 	page := 0
 	var first *twitterscraper.Tweet
@@ -114,6 +123,7 @@ func (r *XReader) ReadHome() error {
 			}
 
 			log.Printf("[%s] received new tweet: %s", date, url)
+			list = append([]NormTweet{{Tweet: tweet, URL: url, Date: date}}, list...)
 		}
 		if finished {
 			break
@@ -125,5 +135,5 @@ func (r *XReader) ReadHome() error {
 		_ = os.WriteFile(r.cfg.LastTweetFile, bytes, 0644)
 	}
 
-	return nil
+	return list, nil
 }
