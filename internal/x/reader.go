@@ -87,23 +87,11 @@ func (r *XReader) ReadHome() error {
 		finished := false
 		log.Printf("Fetched %d tweets", len(tweets))
 		for _, tweet := range tweets {
-			if first == nil {
-				first = tweet
-			}
 			url := fmt.Sprintf("https://x.com/%s/status/%s", tweet.Username, tweet.ID)
 			date := tweet.TimeParsed.Local().Format(time.DateTime)
 
-			if last != nil {
-				lastId, _ := strconv.ParseInt(last.ID, 10, 64)
-				curId, _ := strconv.ParseInt(tweet.ID, 10, 64)
-				if lastId >= curId {
-					log.Printf("[%s] Received already processed tweet: %s", date, url)
-					finished = true
-					break
-				}
-			}
 			if time.Since(tweet.TimeParsed) > dateLimit {
-				log.Printf("[%s] Received too old tweet: %s", date, url)
+				log.Printf("[%s] reached too old tweet: %s", date, url)
 				finished = true
 				break
 			}
@@ -112,7 +100,20 @@ func (r *XReader) ReadHome() error {
 				//log.Printf("[%s] Skip retweet: %s", date, url)
 				continue
 			}
-			log.Printf("[%s] Received new tweet: %s", date, url)
+			if first == nil {
+				first = tweet
+			}
+			if last != nil {
+				lastId, _ := strconv.ParseInt(last.ID, 10, 64)
+				curId, _ := strconv.ParseInt(tweet.ID, 10, 64)
+				if lastId >= curId {
+					log.Printf("[%s] reached already processed tweet: %s", date, url)
+					finished = true
+					break
+				}
+			}
+
+			log.Printf("[%s] received new tweet: %s", date, url)
 		}
 		if finished {
 			break
