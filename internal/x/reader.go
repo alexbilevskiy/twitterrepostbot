@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -90,12 +91,16 @@ func (r *XReader) ReadHome() error {
 				first = tweet
 			}
 			url := fmt.Sprintf("https://x.com/%s/status/%s", tweet.Username, tweet.ID)
-			date := tweet.TimeParsed.Format(time.DateTime)
+			date := tweet.TimeParsed.Local().Format(time.DateTime)
 
-			if last != nil && last.ID == tweet.ID {
-				log.Printf("[%s] Received already processed tweet: %s", date, url)
-				finished = true
-				break
+			if last != nil {
+				lastId, _ := strconv.ParseInt(last.ID, 10, 64)
+				curId, _ := strconv.ParseInt(tweet.ID, 10, 64)
+				if lastId >= curId {
+					log.Printf("[%s] Received already processed tweet: %s", date, url)
+					finished = true
+					break
+				}
 			}
 			if time.Since(tweet.TimeParsed) > dateLimit {
 				log.Printf("[%s] Received too old tweet: %s", date, url)
@@ -114,7 +119,7 @@ func (r *XReader) ReadHome() error {
 		}
 	}
 	if first != nil {
-		log.Printf("storing last tweet: %s", first.TimeParsed.Format(time.DateTime))
+		log.Printf("storing last tweet: %s", first.TimeParsed.Local().Format(time.DateTime))
 		bytes, _ := json.Marshal(first)
 		_ = os.WriteFile(r.cfg.LastTweetFile, bytes, 0644)
 	}

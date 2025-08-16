@@ -30,7 +30,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	timer := time.NewTicker(5 * time.Second)
+	timer := time.NewTicker(60 * time.Second)
 	defer timer.Stop()
 	for {
 		select {
