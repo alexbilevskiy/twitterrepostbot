@@ -53,8 +53,28 @@ func main() {
 				os.Exit(1)
 			}
 			for _, tweet := range tweets {
-				text, disablePreview := formatter.FormatTweet(tweet)
-				_, err := tgBot.SendMessage(cfg.ChatId, text, &gotgbot.SendMessageOpts{ParseMode: "HTML", LinkPreviewOptions: &gotgbot.LinkPreviewOptions{IsDisabled: disablePreview}})
+				text, media := formatter.FormatTweet(tweet)
+				var err error
+				if len(media) > 0 {
+					var inputMedia []gotgbot.InputMedia
+					for i, m := range media {
+						var caption string
+						if i == 0 {
+							caption = text
+						}
+						switch m.MediaType {
+						case formatter.MediaTypePhoto:
+							inputMedia = append(inputMedia, gotgbot.InputMediaPhoto{Media: gotgbot.InputFileByURL(m.URL), Caption: caption, ParseMode: "HTML"})
+						case formatter.MediaTypeVideo:
+							inputMedia = append(inputMedia, gotgbot.InputMediaVideo{Media: gotgbot.InputFileByURL(m.URL), Caption: caption, ParseMode: "HTML"})
+						case formatter.MediaTypeGIF:
+							inputMedia = append(inputMedia, gotgbot.InputMediaAnimation{Media: gotgbot.InputFileByURL(m.URL), Caption: caption, ParseMode: "HTML"})
+						}
+					}
+					_, err = tgBot.SendMediaGroup(cfg.ChatId, inputMedia, nil)
+				} else {
+					_, err = tgBot.SendMessage(cfg.ChatId, text, &gotgbot.SendMessageOpts{ParseMode: "HTML", LinkPreviewOptions: &gotgbot.LinkPreviewOptions{IsDisabled: true}})
+				}
 				if err != nil {
 					log.Printf("failed to send tg message: %v", err)
 					bytes, _ := json.Marshal(tweet)
